@@ -1055,6 +1055,19 @@ const converters = {
             };
         },
     },
+    ias_keypad_alarm: {
+        cluster: 'ssIasZone',
+        type: 'commandStatusChangeNotification',
+        convert: (model, msg, publish, options, meta) => {
+            const zoneStatus = msg.data.zonestatus;
+            return {
+                panic: (zoneStatus & 1) > 0,
+                emergency: (zoneStatus & 1<<1) > 0,
+                tamper: (zoneStatus & 1<<2) > 0,
+                battery_low: (zoneStatus & 1<<3) > 0,
+            };
+        },
+    },
     command_recall: {
         cluster: 'genScenes',
         type: 'commandRecall',
@@ -6446,6 +6459,11 @@ const converters = {
     ignore_thermostat_report: {
         cluster: 'hvacThermostat',
         type: ['attributeReport', 'readResponse'],
+        convert: (model, msg, publish, options, meta) => null,
+    },
+    ignore_iasace_getPanelStatus: {
+        cluster: 'ssIasAce',
+        type: ['commandGetPanelStatus'],
         convert: (model, msg, publish, options, meta) => null,
     },
     ignore_iaszone_attreport: {

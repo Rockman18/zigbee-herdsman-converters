@@ -11470,6 +11470,38 @@ const devices = [
         },
         exposes: [e.contact(), e.battery_low(), e.tamper(), e.temperature(), e.battery()],
     },
+    {
+        zigbeeModel: ['URC4450BC0-X-R'],
+        model: 'XHK1-UE',
+        vendor: 'Universal Electronics Inc',
+        description: 'Xfinity Comcast security keypad',
+        supports: 'action, arm',
+        meta: {configureKey: 1, commandArmIncludeTransaction: true},
+        fromZigbee: [fz.command_arm, fz.temperature, fz.battery, fz.ias_keypad_alarm, fz.ignore_iasace_getPanelStatus],
+        exposes: [e.battery(), e.temperature(), e.tamper(), e.action([
+            'disarm', 'arm_day_zones', 'arm_night_zones', 'arm_all_zones', 'invalid_code', 'emergency',
+        ])],
+        toZigbee: [tz.arm_mode],
+        configure: async (device, coordinatorEndpoint) => {
+            const endpoint = device.getEndpoint(1);
+            const clusters = ['msTemperatureMeasurement', 'genPowerCfg', 'ssIasZone', 'ssIasAce'];
+            await bind(endpoint, coordinatorEndpoint, clusters);
+            await configureReporting.temperature(endpoint);
+            await configureReporting.batteryVoltage(endpoint);
+        },
+        onEvent: async (type, data, device) => {
+            if (type === 'message' && data.type === 'commandGetPanelStatus' && data.cluster === 'ssIasAce' &&
+                globalStore.hasValue(device.getEndpoint(1), 'panelStatus')) {
+                const payload = {
+                    panelstatus: globalStore.getValue(device.getEndpoint(1), 'panelStatus'),
+                    secondsremain: 0x00, audiblenotif: 0x00, alarmstatus: 0x00,
+                };
+                await device.getEndpoint(1).commandResponse(
+                    'ssIasAce', 'getPanelStatusRsp', payload, {}, data.meta.zclTransactionSequenceNumber,
+                );
+            }
+        },
+    },
 
     // Leedarson
     {
